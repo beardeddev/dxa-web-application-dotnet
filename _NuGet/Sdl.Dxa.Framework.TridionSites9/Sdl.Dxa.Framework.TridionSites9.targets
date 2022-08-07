@@ -1,0 +1,8 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="CopyDxaFrameworkLibsToOutput">
+    <ItemGroup>
+      <DxaFrameworkLibs Include="..\packages\Sdl.Dxa.Framework.TridionSites9.2.2.9\lib\net4.8\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DxaFrameworkLibs)" DestinationFolder="$(OutputPath)" />
+  </Target>
+</Project>

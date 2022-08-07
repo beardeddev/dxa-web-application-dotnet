@@ -16,13 +16,12 @@ namespace Sdl.Web.Common.Configuration
     {
         private readonly Localization _localization;
         private ConcurrentDictionary<string, IDictionary<string, string>> _config = new ConcurrentDictionary<string, IDictionary<string, string>>();
-        private IDictionary _resources;
-
-        private readonly object _loadLock = new object();
+        private Lazy<IDictionary> _resources;
 
         public LocalizationResources(Localization localization)
         {
-            _localization = localization;           
+            _localization = localization; 
+            _resources = new Lazy<IDictionary>(() => GetResources());
         }
 
         /// <summary>
@@ -30,11 +29,10 @@ namespace Sdl.Web.Common.Configuration
         /// </summary>
         public virtual void Reload()
         {
-            lock (_loadLock)
+            if(_resources.IsValueCreated)
             {
-                _resources = LoadResources();
+                _resources = new Lazy<IDictionary>(() => GetResources());
             }
-            
             _config.Clear();
         }
 
@@ -79,9 +77,7 @@ namespace Sdl.Web.Common.Configuration
         /// Gets resources.
         /// </summary>
         /// <param name="sectionName">Optional name of the section for which to get resource. If not specified (or <c>null</c>), all resources are obtained.</param>
-        public virtual IDictionary GetResources(string sectionName = null) => _resources;
-
-        protected IDictionary LoadResources()
+        public virtual IDictionary GetResources(string sectionName = null)
         {
             using (new Tracer(this))
             {
@@ -90,7 +86,7 @@ namespace Sdl.Web.Common.Configuration
                     BootstrapData resourcesData = null;
                     _localization.LoadStaticContentItem("resources/_all.json", ref resourcesData);
 
-                    var allResources = new Hashtable();
+                    var newResources = new Hashtable();
                     foreach (string staticContentItemUrl in resourcesData.Files)
                     {
                         string type =
@@ -105,16 +101,16 @@ namespace Sdl.Web.Common.Configuration
                         foreach (KeyValuePair<string, object> resource in resources)
                         {
                             //we ensure resource key uniqueness by adding the type (which comes from the filename)
-                            allResources.Add($"{type}.{resource.Key}", resource.Value);
+                            newResources.Add($"{type}.{resource.Key}", resource.Value);
                         }
                     }
 
-                    return allResources;
+                    return newResources;
                 }
                 catch (Exception)
                 {
                     Log.Warn("Failed to open 'resources/_all.json'");
-                    return new ConcurrentDictionary<string, object>();
+                    return new Dictionary<string, object>();
                 }
             }
         }
